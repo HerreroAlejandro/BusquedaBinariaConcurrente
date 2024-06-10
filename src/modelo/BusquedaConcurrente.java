@@ -6,7 +6,7 @@ import java.util.ArrayList; // Importo la libreria para el uso de Listas de Arra
 import java.util.concurrent.CountDownLatch;  // Importo la libreria para el uso de la funcionalidad de esperarse entre hilos
 
 public class BusquedaConcurrente { // Creo la clase
-    private static final boolean objetivoEncontrado = false; // Variable compartida para indicar si se ha encontrado el objetivo (numero en busqueda)
+    private static volatile boolean objetivoEncontrado = false; // Variable compartida para indicar si se ha encontrado el objetivo (numero en busqueda)
 
     public static int concurrentBinarySearch(int[] array, int target, int numThreads) { //Creo la funcion que me devuelve un entero,le envio por parametro el array,el numero buscado y la cantidad de hilos
 
@@ -30,7 +30,7 @@ public class BusquedaConcurrente { // Creo la clase
             int end = (i == numThreads - 1) ? array.length - 1 : (start + segmentLength - 1); //le envio el ultimo valor al segmento
 
             // Crear y ejecutar el hilo con el segmento calculado
-            SearchTask task = new SearchTask(array, target, start, end, latch); //Instancio la clase SearchTask, guardando los datos de busqueda de cada segmento y la sincronizacion del hilo
+            SearchTask task = new SearchTask(array, target, start, end, latch, objetivoEncontrado); //Instancio la clase SearchTask, guardando los datos de busqueda de cada segmento y la sincronizacion del hilo
             Thread thread = new Thread(task); // Creo hilo
             threads.add(thread); // Agrego en la lista de hilos
             tasks.add(task);   // Agrego en la lista de tareas
@@ -79,14 +79,16 @@ public class BusquedaConcurrente { // Creo la clase
         private int end;  // El índice final del segmento de cada hilo
         private int result = -1; // La posicion del arreglo donde encuentro el valor, Standard -1 = "No se encontró"
         private CountDownLatch latch; // Una instancia de la clase CountDownLatch para sincronizar el inicio de hilos
+        private volatile boolean objetivoEncontrado; //Indica si el valor fue o no encontrado
 
 
-        public SearchTask(int[] array, int target, int start, int end, CountDownLatch latch) { // Créo el constructor, este inicia las variables de instancia con los valores proporcionados cuando se créa la instancia SearchTask
+        public SearchTask(int[] array, int target, int start, int end, CountDownLatch latch, boolean objetivoEncontrado) { // Créo el constructor, este inicia las variables de instancia con los valores proporcionados cuando se créa la instancia SearchTask
             this.array = array;   //Guardo en el atributo array, el array que envio en el constructor
             this.target = target; //Guardo en el atributo target, el target que envio en el constructor
             this.start = start;   //Guardo en el atributo start, el start que envio en el constructor
             this.end = end;       //Guardo en el atributo end, el end que envio en el constructor
             this.latch = latch;   //Guardo en el atributo latch, el latch que envio en el constructor
+            this.objetivoEncontrado = objetivoEncontrado; // Guardo en el atributo objetivoEncontrado, el atributo del constructor
         }
 
         @Override
@@ -95,7 +97,7 @@ public class BusquedaConcurrente { // Creo la clase
             int low = start; //Guardo en la variable low el primer valor de la busqueda del segmento
             int high = end; //Guardo en la variable high el ultimo valor de la busqueda del segmento
 
-            while (low <= high) { // Mientras low sea menor o igual a high , esto se va a repetir la cantidad de veces necesarias hasta que la busqueda recorra el array o lo encuentre antes
+            while (low <= high && !objetivoEncontrado) { // Mientras low sea menor o igual a high , esto se va a repetir la cantidad de veces necesarias hasta que la busqueda recorra el array o lo encuentre antes
 
                 try {
                     Thread.sleep(3000);
@@ -106,6 +108,7 @@ public class BusquedaConcurrente { // Creo la clase
                 int mid = (low + high) / 2; //Posiciono la variable mid a la mitad de las variables low y high
                 if (array[mid] == target) { //Comparo esa posicion del array con el numero buscado
                     result = mid; // Si lo encuentra, guardo esa posicion en el resultado
+                    objetivoEncontrado = true; // Guardo que el numero se encontró
                     break; //Realizo un corte en la funcion para finalizarla ya que fue encontrado
                 } else if (array[mid] < target) { //Si no se encontró, comparo si el valor en la mitad de low y high, es mas grande al valor buscado
                     low = mid + 1; //Si es mas grande, posiciono low en la posicion siguiente al del medio
@@ -117,7 +120,7 @@ public class BusquedaConcurrente { // Creo la clase
         }
 
         public int getResult() { //Creo un get para obtener el resultado
+
             return result; // Devuelvo la variable result
         }
-    }
-}
+    }}
